@@ -1,0 +1,16 @@
+django==6.0.7
+psycopg[binary,pool]==3.3.4
+celery==5.6.3
+django-celery-results==2.6.0
+sentry-sdk==2.64.0
+requests==2.34.2
+uWSGI==2.0.31
+pre-commit==4.6.0
+freezegun==1.5.5
+django-debug-toolbar==7.0.0
+pytest-django==4.12.0
+markdown==3.10.2
+djangorestframework==3.17.1
+django-filter==26.1
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.9.0
