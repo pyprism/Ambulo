@@ -1,4 +1,4 @@
-from sync.viewsets import SyncableModelViewSet
+from sync.views import SyncableModelViewSet
 
 from .models import LocationPoint, Place, Trip
 from .serializers import LocationPointSerializer, PlaceSerializer, TripSerializer
