@@ -140,19 +140,22 @@ class FriendshipViewSet(
         """Friends' latest positions, poll-based, respecting each friend's
         share toggle — never returns a point for a friend who has sharing
         off for this requester."""
-        results = []
+        friends_by_id = {}
         for friendship in self.get_queryset().accepted():
             if not friendship.shares_with(request.user):
                 continue
             friend = friendship.other(request.user)
-            point = (
-                LocationPoint.objects.for_user(friend)
-                .not_deleted()
-                .order_by("-recorded_at")
-                .first()
-            )
-            if point is None:
-                continue
+            friends_by_id[friend.id] = friend
+
+        latest_points = (
+            LocationPoint.objects.filter(user_id__in=friends_by_id)
+            .not_deleted()
+            .order_by("user_id", "-recorded_at")
+            .distinct("user_id")
+        )
+        results = []
+        for point in latest_points:
+            friend = friends_by_id[point.user_id]
             results.append(
                 {
                     "username": friend.username,
