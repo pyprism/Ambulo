@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from datetime import timedelta
 
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 import sentry_sdk
 from kombu import Exchange, Queue
@@ -48,8 +50,12 @@ else:
     ALLOWED_HOSTS = []
 
 
-# Production security hardening (no-ops in DEBUG so local dev over http keeps working)
-if not DEBUG:
+# Production security hardening (no-ops in DEBUG so local dev over http keeps working).
+# CLAUDE.md rule 6: HTTPS required for remote; HTTP allowed only behind this
+# explicit LAN/dev opt-in, never implicitly via DEBUG alone.
+AMBULO_ALLOW_HTTP = os.environ.get("ambulo_allow_http", "false").lower() == "true"
+
+if not DEBUG and not AMBULO_ALLOW_HTTP:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
@@ -76,6 +82,13 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "django_celery_results",
+    "drf_spectacular",
+    "accounts",
+    "sync",
+    "tracking",
+    "health",
+    "imports",
+    "social",
 ]
 
 MIDDLEWARE = [
@@ -90,7 +103,12 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-if DEBUG:
+# SHOW_TOOLBAR_CALLBACK below always renders the toolbar, which breaks the
+# Django test client (no browser to render HTML into) — never load it under
+# pytest, regardless of DEBUG.
+RUNNING_TESTS = "pytest" in sys.modules
+
+if DEBUG and not RUNNING_TESTS:
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
@@ -181,6 +199,10 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+# Import uploads / export archives (SPEC 6.10)
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # debug toolbar
 if DEBUG:
@@ -318,6 +340,14 @@ REST_FRAMEWORK = {
         "utils.permissions.MustChangePasswordPermission",
     ],
     "EXCEPTION_HANDLER": "utils.exceptions.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Ambulo API",
+    "DESCRIPTION": "Self-hostable OwnTracks + Google Fit style location/fitness API.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 # sentry for error tracking
@@ -413,4 +443,13 @@ CELERY_RESULT_EXPIRES = timedelta(days=15)
 CELERY_TIMEZONE = os.environ.get("time_zone", "UTC")
 CELERY_ENABLE_UTC = True
 
-CELERY_BEAT_SCHEDULE = {}
+CELERY_BEAT_SCHEDULE = {
+    "recompute-recent-daily-rollups": {
+        "task": "health.recompute_recent_rollups",
+        "schedule": crontab(hour=2, minute=30),
+    },
+    "location-retention-cleanup": {
+        "task": "tracking.retention_cleanup",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
