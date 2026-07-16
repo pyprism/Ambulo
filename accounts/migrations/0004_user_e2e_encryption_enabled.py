@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="e2e_encryption_enabled",
             field=models.BooleanField(
                 default=False,
-                help_text="Groundwork flag only (SPEC §16, future). No client currently encrypts payloads before upload, and the server does nothing different when this is set — flipping it today has no effect.",
+                help_text="Groundwork flag only. No client currently encrypts payloads before upload, and the server does nothing different when this is set — flipping it today has no effect.",
             ),
         ),
     ]

@@ -85,7 +85,7 @@ class DeviceSerializer(serializers.ModelSerializer):
         # id is the client-generated pk — writable on create (the custom
         # DeviceViewSet.create reads it directly), but must never change on
         # an existing row: PATCHing a different id risks an undefined pk
-        # rewrite on save() instead of a clean no-op (issue.md L4).
+        # rewrite on save() instead of a clean no-op.
         fields = super().get_fields()
         fields["id"] = serializers.UUIDField(read_only=self.instance is not None)
         return fields

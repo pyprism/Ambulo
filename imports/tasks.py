@@ -175,8 +175,7 @@ def process_export(job_id):
     """Streams the archive to a temp file row-by-row instead of building the
     whole document in memory — a multi-year account (the load test used
     105k+ points) must not risk OOMing a worker on export. JSON is a full account archive across every syncable
-    type, grouped by type; CSV/GPX/GeoJSON stay location-history-scoped
-    (issue.md H1)."""
+    type, grouped by type; CSV/GPX/GeoJSON stay location-history-scoped."""
     job = ExportJob.objects.select_related("user").get(pk=job_id)
     job.status = JobStatus.processing
     job.save(update_fields=["status"])

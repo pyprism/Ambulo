@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default="",
-                help_text="E2E-encryption groundwork (SPEC §16, future flag). Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
+                help_text="E2E-encryption groundwork. Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
             ),
         ),
         migrations.AddField(
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default="",
-                help_text="E2E-encryption groundwork (SPEC §16, future flag). Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
+                help_text="E2E-encryption groundwork. Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
             ),
         ),
         migrations.AddField(
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default="",
-                help_text="E2E-encryption groundwork (SPEC §16, future flag). Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
+                help_text="E2E-encryption groundwork. Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
             ),
         ),
         migrations.AddField(
@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default="",
-                help_text="E2E-encryption groundwork (SPEC §16, future flag). Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
+                help_text="E2E-encryption groundwork. Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
             ),
         ),
         migrations.AddField(
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default="",
-                help_text="E2E-encryption groundwork (SPEC §16, future flag). Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
+                help_text="E2E-encryption groundwork. Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
             ),
         ),
         migrations.AddField(
@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default="",
-                help_text="E2E-encryption groundwork (SPEC §16, future flag). Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
+                help_text="E2E-encryption groundwork. Reserved for an opaque client-encrypted payload the server stores without reading. Unused today — no client encrypts before upload, and no server code branches on this field yet.",
             ),
         ),
         migrations.AlterField(

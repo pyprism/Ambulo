@@ -200,7 +200,7 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-# Import uploads / export archives (SPEC 6.10)
+# Import uploads / export archives
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 

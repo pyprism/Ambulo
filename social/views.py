@@ -35,7 +35,7 @@ class FriendshipViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     """Friend requests, accept/revoke/block, per-direction share toggle, and
-    friends' latest-position query (plan.md Phase 4, SPEC 6.6)."""
+    friends' latest-position query."""
 
     serializer_class = FriendshipSerializer
 
@@ -81,7 +81,7 @@ class FriendshipViewSet(
             raise PermissionDenied("Only the addressee can accept a friend request.")
         # Without this, an already-blocked (or already-accepted) row could be
         # re-accepted regardless of state — blocking wasn't actually durable
-        # (issue.md H3).
+        # without an explicit pending-state check.
         if friendship.status != FriendshipStatus.pending:
             return Response(
                 {
@@ -100,7 +100,7 @@ class FriendshipViewSet(
         friendship = self.get_object()
         # A blocked relationship can only be lifted by whoever blocked it —
         # otherwise the blocked party deletes the row and immediately sends
-        # a fresh request, bypassing the block entirely (issue.md H3).
+        # a fresh request, bypassing the block entirely.
         if (
             friendship.status == FriendshipStatus.blocked
             and friendship.blocked_by_id != request.user.pk
@@ -139,7 +139,7 @@ class FriendshipViewSet(
     def locations(self, request):
         """Friends' latest positions, poll-based, respecting each friend's
         share toggle — never returns a point for a friend who has sharing
-        off for this requester (SPEC 6.6)."""
+        off for this requester."""
         results = []
         for friendship in self.get_queryset().accepted():
             if not friendship.shares_with(request.user):

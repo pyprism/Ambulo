@@ -12,7 +12,7 @@ from tracking.models import LocationPoint
 
 
 class Command(BaseCommand):
-    help = "Benchmark batch sync + pagination against a load_test_generate dataset (plan.md Phase 5)."
+    help = "Benchmark batch sync + pagination against a load_test_generate dataset."
 
     def add_arguments(self, parser):
         parser.add_argument("--username", default="loadtest")

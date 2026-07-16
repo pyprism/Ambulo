@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name="blocked_by",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Who blocked this relationship. Only this user may revoke a blocked friendship — otherwise the blocked party could delete the row and immediately re-request (issue.md H3).",
+                help_text="Who blocked this relationship. Only this user may revoke a blocked friendship — otherwise the blocked party could delete the row and immediately re-request.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="+",

@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="state_as_of",
             field=models.DateTimeField(
                 blank=True,
-                help_text="recorded_at of the point that last determined currently_inside. Guards against out-of-order/concurrent geofence tasks (batch sync, retries) flipping state using a stale point (issue.md M1).",
+                help_text="recorded_at of the point that last determined currently_inside. Guards against out-of-order/concurrent geofence tasks (batch sync, retries) flipping state using a stale point.",
                 null=True,
             ),
         ),

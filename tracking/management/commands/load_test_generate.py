@@ -11,7 +11,7 @@ from tracking.models import LocationPoint
 
 
 class Command(BaseCommand):
-    help = "Generate a multi-year synthetic LocationPoint dataset for load testing (plan.md Phase 5)."
+    help = "Generate a multi-year synthetic LocationPoint dataset for load testing."
 
     def add_arguments(self, parser):
         parser.add_argument("--username", default="loadtest")

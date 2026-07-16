@@ -132,7 +132,7 @@ class SyncableModel(models.Model):
         blank=True,
         related_name="%(app_label)s_%(class)s_set",
         help_text="Set when this record was created by an import — lets a "
-        "user identify/revert one specific import batch (issue.md M3).",
+        "user identify/revert one specific import batch.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

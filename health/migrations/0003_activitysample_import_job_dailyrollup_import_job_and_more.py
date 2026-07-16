@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             name="import_job",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch (issue.md M3).",
+                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="%(app_label)s_%(class)s_set",
@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
             name="import_job",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch (issue.md M3).",
+                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="%(app_label)s_%(class)s_set",
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
             name="import_job",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch (issue.md M3).",
+                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="%(app_label)s_%(class)s_set",
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
             name="import_job",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch (issue.md M3).",
+                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="%(app_label)s_%(class)s_set",
@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
             name="import_job",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch (issue.md M3).",
+                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="%(app_label)s_%(class)s_set",
@@ -80,7 +80,7 @@ class Migration(migrations.Migration):
             name="import_job",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch (issue.md M3).",
+                help_text="Set when this record was created by an import — lets a user identify/revert one specific import batch.",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="%(app_label)s_%(class)s_set",

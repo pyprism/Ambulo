@@ -155,8 +155,7 @@ def parse_google_fit(file_obj):
 
 
 def parse_owntracks_csv(file_obj):
-    """OwnTracks CSV export: time/tst, lat, lon, alt, batt columns
-    (issue.md M4 — OwnTracks CSV was the one OwnTracks variant missing)."""
+    """OwnTracks CSV export: time/tst, lat, lon, alt, batt columns."""
     raw = file_obj.read()
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8-sig")
@@ -188,7 +187,7 @@ def parse_google_takeout_semantic(file_obj):
     """Google Takeout "Semantic Location History" (newer format: a
     timelineObjects array of activitySegment/placeVisit, ISO timestamps —
     structurally different from the older locations.json array parsed by
-    parse_google_takeout). issue.md M4."""
+    parse_google_takeout)."""
     data = json.load(file_obj)
     for obj in data.get("timelineObjects", []):
         activity = obj.get("activitySegment")
@@ -226,8 +225,8 @@ def parse_google_takeout_semantic(file_obj):
 
 def parse_tcx(file_obj):
     """TCX (Training Center XML) workout export — Google Fit and Garmin
-    both use it (SPEC 6.10 "Google Fit ... TCX"). Trackpoints carry
-    position + optional heart rate; yields both record kinds."""
+    both use it. Trackpoints carry position + optional heart rate; yields
+    both record kinds."""
     tree = ET.parse(file_obj)
     root = tree.getroot()
     for elem in root.iter():
