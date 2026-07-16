@@ -60,6 +60,8 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["email"]
 
     def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
         if not self.share_code:
             self.share_code = generate_share_code()
         super().save(*args, **kwargs)
