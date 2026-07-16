@@ -51,7 +51,7 @@ else:
 
 
 # Production security hardening (no-ops in DEBUG so local dev over http keeps working).
-# CLAUDE.md rule 6: HTTPS required for remote; HTTP allowed only behind this
+# HTTPS required for remote; HTTP allowed only behind this
 # explicit LAN/dev opt-in, never implicitly via DEBUG alone.
 AMBULO_ALLOW_HTTP = os.environ.get("ambulo_allow_http", "false").lower() == "true"
 
