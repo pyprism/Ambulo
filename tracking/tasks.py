@@ -48,7 +48,7 @@ def reverse_geocode_place(self, place_id):
         cache.set(key, address, GEOCODE_CACHE_TTL)
 
     place.address = address
-    place.save()
+    place.save(update_fields=["address"])
     return address
 
 
