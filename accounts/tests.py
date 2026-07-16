@@ -42,6 +42,20 @@ def test_first_registered_user_becomes_admin_and_next_user_does_not(api_client):
 
 
 @pytest.mark.django_db
+def test_registered_user_email_is_stored_lowercase(api_client):
+    response = api_client.post(
+        "/api/accounts/users/register/",
+        _register_payload("mixedcase", "User@Example.COM"),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    user = User.objects.get(username="mixedcase")
+    assert user.email == "user@example.com"
+    assert response.data["email"] == "user@example.com"
+
+
+@pytest.mark.django_db
 @override_settings(REGISTRATION_OPEN=False)
 def test_registration_closed_rejects_new_accounts(api_client):
     response = api_client.post(
