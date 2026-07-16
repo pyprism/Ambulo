@@ -109,7 +109,7 @@ class DeviceViewSet(viewsets.ModelViewSet):
         return Device.objects.for_user(self.request.user)
 
     def create(self, request, *args, **kwargs):
-        from sync.exceptions import CrossUserConflict
+        from utils.exceptions import CrossUserConflict
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

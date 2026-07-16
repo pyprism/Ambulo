@@ -128,3 +128,11 @@ def human_join(values):
     if len(values) == 2:
         return f"{values[0]} and {values[1]}"
     return f"{', '.join(values[:-1])}, and {values[-1]}"
+
+
+class CrossUserConflict(Exception):
+    """A client-supplied record id already belongs to a different user."""
+
+    def __init__(self, record_id):
+        self.record_id = record_id
+        super().__init__(f"Record {record_id} belongs to another user.")
