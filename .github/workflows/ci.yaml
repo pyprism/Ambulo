@@ -64,13 +64,10 @@ jobs:
         run: python manage.py makemigrations --check --dry-run
 
       - name: Run migrations
-        run: |
-          export $(grep -v '^#' .env | xargs)
-          python manage.py migrate --noinput
+        run: python manage.py migrate --noinput
 
       - name: Run tests with coverage
         run: |
-          export $(grep -v '^#' .env | xargs)
           coverage run -m pytest
           coverage report
           coverage xml
