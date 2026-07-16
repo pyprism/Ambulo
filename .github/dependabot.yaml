@@ -7,3 +7,5 @@ updates:
   target-branch: master
 - package-ecosystem: docker
   directory: "/"
+  schedule:
+    interval: daily
