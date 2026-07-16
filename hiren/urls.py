@@ -7,6 +7,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 
 from django.urls import path, re_path, include
 from django.conf import settings
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import (
     TokenBlacklistView,
     TokenObtainPairView,
@@ -22,28 +23,33 @@ urls = [
     path(
         "api-auth/", include("rest_framework.urls")
     ),  # For DRF's browsable API login/logout
+    path("api/", include("accounts.urls")),
+    path("api/", include("sync.urls")),
+    path("api/", include("tracking.urls")),
+    path("api/", include("health.urls")),
+    path("api/", include("imports.urls")),
+    path("api/", include("social.urls")),
 ]
 
 if settings.DEBUG:
-    import debug_toolbar
-    from rest_framework.permissions import AllowAny
-    from rest_framework.schemas import get_schema_view
+    from django.conf.urls.static import static
 
     debug_urls = [
-        re_path(r"^__debug__/", include(debug_toolbar.urls)),
+        path("api/schema/", SpectacularAPIView.as_view(), name="openapi-schema"),
         path(
-            "api/schema/",
-            get_schema_view(
-                title="Ambulo API",
-                version="1.0.0",
-                public=True,
-                authentication_classes=[],
-                permission_classes=[AllowAny],
-            ),
-            name="openapi-schema",
+            "api/docs/",
+            SpectacularSwaggerView.as_view(url_name="openapi-schema"),
+            name="swagger-ui",
         ),
-        # path("api/docs/", swagger_ui, name="swagger-ui"),
     ]
-    urlpatterns = debug_urls + urls
+    if not settings.RUNNING_TESTS:
+        import debug_toolbar
+
+        debug_urls.append(re_path(r"^__debug__/", include(debug_toolbar.urls)))
+    urlpatterns = (
+        debug_urls
+        + urls
+        + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    )
 else:
     urlpatterns = urls
