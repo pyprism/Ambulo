@@ -19,8 +19,13 @@ def notify_friend_geofence_event(actor_user_id, place_name, event_type):
     except User.DoesNotExist:
         return 0
 
-    count = 0
-    for friendship in Friendship.objects.involving(actor).accepted():
+    notifications = []
+    friendships = (
+        Friendship.objects.involving(actor)
+        .accepted()
+        .select_related("requester", "addressee")
+    )
+    for friendship in friendships:
         friend = friendship.other(actor)
         actor_shares = (
             friendship.requester_shares_location
@@ -29,14 +34,16 @@ def notify_friend_geofence_event(actor_user_id, place_name, event_type):
         )
         if not actor_shares:
             continue
-        Notification.objects.create(
-            user=friend,
-            notification_type=NotificationType.friend_geofence,
-            payload={
-                "friend_username": actor.username,
-                "place": place_name,
-                "event": event_type,
-            },
+        notifications.append(
+            Notification(
+                user=friend,
+                notification_type=NotificationType.friend_geofence,
+                payload={
+                    "friend_username": actor.username,
+                    "place": place_name,
+                    "event": event_type,
+                },
+            )
         )
-        count += 1
-    return count
+    Notification.objects.bulk_create(notifications)
+    return len(notifications)
