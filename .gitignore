@@ -67,6 +67,7 @@ config.local.json
 node_modules/
 .env/
 webpack-stats.json
+media/*
 media/hiren/*
 static/CACHE/*
 logs/*.log*
