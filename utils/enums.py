@@ -88,3 +88,34 @@ class FriendshipStatus(models.TextChoices):
 class NotificationType(models.TextChoices):
     friend_request = "friend_request", "Friend Request"
     friend_geofence = "friend_geofence", "Friend Geofence Event"
+
+
+class ImportFormat(models.TextChoices):
+    ambulo_json = "ambulo_json", "Ambulo JSON"
+    gpx = "gpx", "GPX"
+    geojson = "geojson", "GeoJSON"
+    owntracks = "owntracks", "OwnTracks (.rec/JSON)"
+    owntracks_csv = "owntracks_csv", "OwnTracks CSV"
+    google_takeout = "google_takeout", "Google Takeout (locations.json)"
+    google_takeout_semantic = (
+        "google_takeout_semantic",
+        "Google Takeout (Semantic Location History)",
+    )
+    google_fit = "google_fit", "Google Fit (steps CSV)"
+    tcx = "tcx", "TCX (Google Fit/Garmin workout export)"
+
+
+class ExportFormat(models.TextChoices):
+    json = "json", "JSON"
+    csv = "csv", "CSV"
+    gpx = "gpx", "GPX"
+    geojson = "geojson", "GeoJSON"
+
+
+class JobStatus(models.TextChoices):
+    pending = "pending", "Pending"
+    processing = "processing", "Processing"
+    preview_ready = "preview_ready", "Preview Ready"
+    completed = "completed", "Completed"
+    failed = "failed", "Failed"
+    partial = "partial", "Partial"
