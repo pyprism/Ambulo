@@ -38,13 +38,16 @@ def parse_gpx(file_obj):
                 time_text = child.text
             elif child_tag == "ele":
                 ele_text = child.text
-        yield {
-            "kind": "location_point",
-            "latitude": float(lat),
-            "longitude": float(lon),
-            "recorded_at": time_text or datetime.now(dt_timezone.utc).isoformat(),
-            "altitude": float(ele_text) if ele_text else None,
-        }
+        try:
+            yield {
+                "kind": "location_point",
+                "latitude": float(lat),
+                "longitude": float(lon),
+                "recorded_at": time_text or datetime.now(dt_timezone.utc).isoformat(),
+                "altitude": float(ele_text) if ele_text else None,
+            }
+        except ValueError:
+            continue
 
 
 def parse_geojson(file_obj):
@@ -173,14 +176,17 @@ def parse_owntracks_csv(file_obj):
                 ).isoformat()
             except (TypeError, ValueError):
                 recorded_at = tst  # already an ISO string
-        yield {
-            "kind": "location_point",
-            "latitude": float(lat),
-            "longitude": float(lon),
-            "recorded_at": recorded_at,
-            "altitude": float(row["alt"]) if row.get("alt") else None,
-            "battery_level": float(row["batt"]) if row.get("batt") else None,
-        }
+        try:
+            yield {
+                "kind": "location_point",
+                "latitude": float(lat),
+                "longitude": float(lon),
+                "recorded_at": recorded_at,
+                "altitude": float(row["alt"]) if row.get("alt") else None,
+                "battery_level": float(row["batt"]) if row.get("batt") else None,
+            }
+        except ValueError:
+            continue
 
 
 def parse_google_takeout_semantic(file_obj):
@@ -252,20 +258,26 @@ def parse_tcx(file_obj):
                         heart_rate = hr_child.text
 
         if lat is not None and lon is not None and time_text:
-            yield {
-                "kind": "location_point",
-                "latitude": float(lat),
-                "longitude": float(lon),
-                "recorded_at": time_text,
-                "altitude": float(alt) if alt is not None else None,
-            }
+            try:
+                yield {
+                    "kind": "location_point",
+                    "latitude": float(lat),
+                    "longitude": float(lon),
+                    "recorded_at": time_text,
+                    "altitude": float(alt) if alt is not None else None,
+                }
+            except ValueError:
+                continue
         if heart_rate is not None and time_text:
-            yield {
-                "kind": "health_sample",
-                "metric_type": "heart_rate",
-                "value": float(heart_rate),
-                "recorded_at": time_text,
-            }
+            try:
+                yield {
+                    "kind": "health_sample",
+                    "metric_type": "heart_rate",
+                    "value": float(heart_rate),
+                    "recorded_at": time_text,
+                }
+            except ValueError:
+                continue
 
 
 PARSERS = {
