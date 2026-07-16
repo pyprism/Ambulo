@@ -5,7 +5,7 @@ from django.db import models, transaction
 
 from utils.enums import SyncSource, SyncState
 
-from .exceptions import CrossUserConflict
+from utils.exceptions import CrossUserConflict
 
 
 def _field_unchanged(existing, field, value):

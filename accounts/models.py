@@ -7,7 +7,7 @@ from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.db import connection, models, transaction
 
 from utils.enums import DevicePlatform
-from sync.exceptions import CrossUserConflict
+from utils.exceptions import CrossUserConflict
 
 # Arbitrary constant: pg_advisory_xact_lock key. Any int64 works,
 # it just needs to be a value no other code path locks on.
