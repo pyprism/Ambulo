@@ -4,3 +4,4 @@ updates:
   directory: "/"
 
 - package-ecosystem: docker
+  directory: "/"
