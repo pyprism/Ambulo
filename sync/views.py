@@ -18,6 +18,7 @@ from health.models import HealthSample
 from tracking.models import LocationPoint
 
 DOWNLOAD_BATCH_LIMIT = 500
+UPLOAD_BATCH_LIMIT = 1000
 
 
 class SyncableModelViewSet(viewsets.ModelViewSet):
@@ -36,6 +37,13 @@ class SyncableModelViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         payload = request.data if isinstance(request.data, list) else [request.data]
+        if len(payload) > UPLOAD_BATCH_LIMIT:
+            return Response(
+                {
+                    "message": f"Upload is limited to {UPLOAD_BATCH_LIMIT} records; chunk the request."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         device = resolve_device(request)
         accepted, rejected, conflicts = [], [], []
         for raw in payload:
@@ -141,6 +149,16 @@ class SyncViewSet(viewsets.ViewSet):
                 {"message": "'records' must be an object mapping type name to a list."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        total_records = sum(
+            len(records) for records in batches.values() if isinstance(records, list)
+        )
+        if total_records > UPLOAD_BATCH_LIMIT:
+            return Response(
+                {
+                    "message": f"Upload is limited to {UPLOAD_BATCH_LIMIT} records across all types; chunk the request."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         device = resolve_device(request)
         results = {}
@@ -224,8 +242,11 @@ class HealthzViewSet(viewsets.ViewSet):
             and checks["worker"]
             and checks["queue_depth"] is not None
         )
+        payload = {"status": "ok" if healthy else "degraded"}
+        if request.user.is_authenticated and request.user.is_staff:
+            payload["checks"] = checks
         return Response(
-            {"status": "ok" if healthy else "degraded", "checks": checks},
+            payload,
             status=(
                 status.HTTP_200_OK if healthy else status.HTTP_503_SERVICE_UNAVAILABLE
             ),
