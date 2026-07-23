@@ -26,6 +26,12 @@ class MonitoringMode(models.TextChoices):
     move = "move", "Move"
 
 
+class BiologicalSex(models.TextChoices):
+    male = "male", "Male"
+    female = "female", "Female"
+    other = "other", "Other"
+
+
 class DevicePlatform(models.TextChoices):
     android = "android", "Android"
     ios = "ios", "iOS"
@@ -87,6 +93,7 @@ class FriendshipStatus(models.TextChoices):
 
 class NotificationType(models.TextChoices):
     friend_request = "friend_request", "Friend Request"
+    friend_accept = "friend_accept", "Friend Accepted"
     friend_geofence = "friend_geofence", "Friend Geofence Event"
 
 
