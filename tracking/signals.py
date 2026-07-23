@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -14,7 +15,9 @@ def trigger_geofence_check(sender, instance, **kwargs):
     # transitions against years-old rows corrupts Place.currently_inside
     # and spams friends with stale "entered/exited" notifications .
     if not instance.deleted_at and instance.source != SyncSource.import_:
-        safe_delay(process_geofence_events, str(instance.pk))
+        key = f"geofence-sweep-pending:{instance.user_id}"
+        if cache.add(key, "1", timeout=60):
+            safe_delay(process_geofence_events, str(instance.pk))
 
 
 @receiver(post_save, sender=Place)
