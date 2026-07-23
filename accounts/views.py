@@ -11,7 +11,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from utils.audit import record_audit_event
 from utils.permissions import IsStaffUser
 
-from .models import AuditLog, Device, User
+from .models import AuditLog, Device, RegistrationClosed, User
 from .serializers import (
     AuditLogSerializer,
     ChangePasswordSerializer,
@@ -63,14 +63,18 @@ class UserViewSet(
 
     @action(detail=False, methods=["post"], permission_classes=[AllowAny])
     def register(self, request):
-        if not settings.REGISTRATION_OPEN:
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = User.objects.create_registered_user(
+                **serializer.validated_data,
+                registration_open=settings.REGISTRATION_OPEN,
+            )
+        except RegistrationClosed:
             return Response(
                 {"message": "Registration is closed on this server."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = User.objects.create_registered_user(**serializer.validated_data)
         record_audit_event(request, "user.register", username=user.username)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
