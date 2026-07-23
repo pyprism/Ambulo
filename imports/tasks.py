@@ -25,6 +25,30 @@ COORD_DEDUPE_TOLERANCE = 0.00005
 TIMESTAMP_DEDUPE_TOLERANCE = timedelta(seconds=1)
 
 
+@shared_task(name="imports.revert_import")
+def revert_import(job_id):
+    """Tombstone an import asynchronously, retaining tombstones for sync."""
+    from django.utils import timezone
+    from sync.registry import all_syncable_types, get_syncable
+    from utils.enums import SyncState
+
+    job = ImportJob.objects.get(pk=job_id)
+    now, tombstoned = timezone.now(), 0
+    for type_name in all_syncable_types():
+        model, _serializer = get_syncable(type_name)
+        records = model.objects.filter(
+            user=job.user, import_job=job, deleted_at__isnull=True
+        )
+        for record in records.iterator(chunk_size=500):
+            record.deleted_at = now
+            record.sync_state = SyncState.deleted_pending_sync
+            record.save(update_fields=["deleted_at", "sync_state"])
+            tombstoned += 1
+    job.summary = {**job.summary, "reverted": tombstoned}
+    job.save(update_fields=["summary"])
+    return tombstoned
+
+
 @shared_task(name="imports.preview_import")
 def preview_import(job_id):
     """Dry-run parse pass: dedupe-checks and validates every record but
