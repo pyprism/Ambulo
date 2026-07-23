@@ -57,7 +57,25 @@ def test_registered_user_email_is_stored_lowercase(api_client):
 
 @pytest.mark.django_db
 @override_settings(REGISTRATION_OPEN=False)
-def test_registration_closed_rejects_new_accounts(api_client):
+def test_registration_closed_allows_first_account_as_admin(api_client):
+    response = api_client.post(
+        "/api/accounts/users/register/",
+        _register_payload("closed", "closed@example.com"),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.data["is_staff"] is True
+    assert response.data["is_superuser"] is True
+
+
+@pytest.mark.django_db
+@override_settings(REGISTRATION_OPEN=False)
+def test_registration_closed_rejects_accounts_after_first(api_client):
+    User.objects.create_registered_user(
+        username="admin", email="admin@example.com", password="testpass12345"
+    )
+
     response = api_client.post(
         "/api/accounts/users/register/",
         _register_payload("closed", "closed@example.com"),
@@ -66,7 +84,7 @@ def test_registration_closed_rejects_new_accounts(api_client):
 
     assert response.status_code == 403
     assert response.data["message"] == "Registration is closed on this server."
-    assert User.objects.count() == 0
+    assert User.objects.count() == 1
 
 
 @pytest.mark.django_db
