@@ -8,15 +8,16 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 from django.urls import path, re_path, include
 from django.conf import settings
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import (
     TokenBlacklistView,
-    TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView,
 )
+from accounts.authentication import AuditedTokenObtainPairView
 
 urls = [
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/", AuditedTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/token/blacklist/", TokenBlacklistView.as_view(), name="token_blacklist"),
     path("api/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
@@ -29,13 +30,15 @@ urls = [
     path("api/", include("health.urls")),
     path("api/", include("imports.urls")),
     path("api/", include("social.urls")),
+    path(
+        "api/schema/",
+        SpectacularAPIView.as_view(permission_classes=[IsAuthenticated]),
+        name="openapi-schema",
+    ),
 ]
 
 if settings.DEBUG:
-    from django.conf.urls.static import static
-
     debug_urls = [
-        path("api/schema/", SpectacularAPIView.as_view(), name="openapi-schema"),
         path(
             "api/docs/",
             SpectacularSwaggerView.as_view(url_name="openapi-schema"),
@@ -46,10 +49,6 @@ if settings.DEBUG:
         import debug_toolbar
 
         debug_urls.append(re_path(r"^__debug__/", include(debug_toolbar.urls)))
-    urlpatterns = (
-        debug_urls
-        + urls
-        + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    )
+    urlpatterns = debug_urls + urls
 else:
     urlpatterns = urls
