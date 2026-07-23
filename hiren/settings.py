@@ -366,11 +366,9 @@ if DEBUG:
 
 
 # Enable/disable self-service registration on POST /api/accounts/users/register/.
-# Defaults to open in DEBUG (so local dev can bootstrap an admin user) and
-# closed in prod. To bootstrap the first/admin user in prod, either run
-# `manage.py createsuperuser`, or temporarily set registration_open=true,
-# register the first account (which becomes staff/superuser automatically),
-# then set registration_open=false again.
+# Defaults to open in DEBUG and closed in prod. The first account can always
+# register and becomes staff/superuser, even when this is false. Once an
+# account exists, this setting controls all further self-service registration.
 REGISTRATION_OPEN = (
     os.environ.get("registration_open", "true" if DEBUG else "false").lower() == "true"
 )
