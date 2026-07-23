@@ -48,6 +48,10 @@ class Place(SyncableModel):
             "sync, retries) flipping state using a stale point."
         ),
     )
+    notify_friends = models.BooleanField(
+        default=False,
+        help_text="Send accepted friends enter/exit notifications for this place.",
+    )
 
     class Meta(SyncableModel.Meta):
         indexes = [models.Index(fields=["user", "category"])]
