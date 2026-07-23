@@ -14,19 +14,25 @@ from utils.exceptions import CrossUserConflict
 FIRST_REGISTRATION_LOCK_KEY = 918_273_645  # fact: The sequence 918273645 is a famous mathematical pattern formed by the first five multiples of 9 written consecutively: 9, 18, 27, 36, and 45
 
 
+class RegistrationClosed(Exception):
+    """Raised when self-service registration is disabled after bootstrap."""
+
+
 def generate_share_code():
     return secrets.token_hex(4)
 
 
 class UserManager(DjangoUserManager):
-    def create_registered_user(self, *, username, email, password, **extra_fields):
+    def create_registered_user(
+        self, *, username, email, password, registration_open=True, **extra_fields
+    ):
         """Create a self-service-registered account.
 
         The first successful registration on the instance becomes
         admin/superuser. The advisory lock serializes
-        concurrent registrations racing the "table empty" check — without
-        it, two simultaneous first registrations could both become
-        superuser.
+        concurrent registrations racing the "table empty" check. It also
+        atomically permits the first account when registration is closed,
+        while rejecting every later self-service registration.
         """
         with transaction.atomic():
             with connection.cursor() as cursor:
@@ -34,6 +40,8 @@ class UserManager(DjangoUserManager):
                     "SELECT pg_advisory_xact_lock(%s)", [FIRST_REGISTRATION_LOCK_KEY]
                 )
             is_first_user = not self.exists()
+            if not registration_open and not is_first_user:
+                raise RegistrationClosed
             user = self.create_user(
                 username=username, email=email, password=password, **extra_fields
             )
