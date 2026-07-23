@@ -6,7 +6,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.db import connection, models, transaction
 
-from utils.enums import DevicePlatform
+from utils.enums import BiologicalSex, DevicePlatform
 from utils.exceptions import CrossUserConflict
 
 # Arbitrary constant: pg_advisory_xact_lock key. Any int64 works,
@@ -50,6 +50,15 @@ class User(AbstractUser):
     last_seen_at = models.DateTimeField(null=True, blank=True)
     share_code = models.CharField(max_length=16, unique=True, blank=True)
     location_retention_days = models.PositiveIntegerField(null=True, blank=True)
+    # Weight/height are NOT here — they're time-varying readings, tracked as
+    # HealthSample(metric_type=weight/height) like any other health metric
+    # so they get a history graph for free. Only the profile attributes
+    # that don't already fit that shape (age, sex — needed for the BMR
+    # calorie estimate) live on the account.
+    date_of_birth = models.DateField(null=True, blank=True)
+    biological_sex = models.CharField(
+        max_length=16, choices=BiologicalSex.choices, blank=True
+    )
     e2e_encryption_enabled = models.BooleanField(
         default=False,
         help_text=("encrypts payloads before upload, and the server does nothing"),
