@@ -12,12 +12,12 @@ class UserRegisterSerializer(serializers.Serializer):
 
     def validate_username(self, value):
         if User.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError("Username is already taken.")
+            raise serializers.ValidationError("Unable to register with these details.")
         return value
 
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("Email is already registered.")
+            raise serializers.ValidationError("Unable to register with these details.")
         return value
 
     def validate(self, attrs):
@@ -49,6 +49,8 @@ class UserSerializer(serializers.ModelSerializer):
             "last_seen_at",
             "share_code",
             "location_retention_days",
+            "date_of_birth",
+            "biological_sex",
         ]
         read_only_fields = fields
 
@@ -58,7 +60,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["location_retention_days"]
+        fields = ["location_retention_days", "date_of_birth", "biological_sex"]
 
 
 class ChangePasswordSerializer(serializers.Serializer):
