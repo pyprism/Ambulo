@@ -1,17 +1,16 @@
-from django.utils import timezone
+from django.http import FileResponse, Http404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from sync.registry import all_syncable_types, get_syncable
 from utils.audit import record_audit_event
-from utils.enums import SyncState, JobStatus
+from utils.enums import JobStatus
 from utils.tasks import safe_delay
 
 from .models import ExportJob, ImportJob
 from .serializers import ExportJobSerializer, ImportJobSerializer
-from .tasks import process_export, process_import, preview_import
+from .tasks import process_export, process_import, preview_import, revert_import
 
 
 class ImportJobViewSet(
@@ -64,25 +63,23 @@ class ImportJobViewSet(
 
     @action(detail=True, methods=["post"])
     def revert(self, request, pk=None):
-        """Tombstone every record this import wrote, across every syncable
-        type."""
+        """Queue tombstoning so large imports never hold the HTTP request."""
         job = self.get_object()
-        now = timezone.now()
-        tombstoned = 0
-        for type_name in all_syncable_types():
-            model, _serializer_class = get_syncable(type_name)
-            records = model.objects.filter(
-                user=request.user, import_job=job, deleted_at__isnull=True
-            )
-            for record in records:
-                record.deleted_at = now
-                record.sync_state = SyncState.deleted_pending_sync
-                record.save()
-                tombstoned += 1
-        record_audit_event(
-            request, "import.revert", job_id=str(job.pk), tombstoned=tombstoned
+        safe_delay(revert_import, str(job.pk))
+        record_audit_event(request, "import.revert", job_id=str(job.pk), queued=True)
+        return Response({"status": "queued"}, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        """Source files are only ever streamed to their owning user."""
+        job = self.get_object()
+        if not job.file:
+            raise Http404
+        return FileResponse(
+            job.file.open("rb"),
+            as_attachment=True,
+            filename=job.file.name.rsplit("/", 1)[-1],
         )
-        return Response({"tombstoned": tombstoned})
 
 
 class ExportJobViewSet(
@@ -105,3 +102,15 @@ class ExportJobViewSet(
             export_format=job.export_format,
         )
         safe_delay(process_export, str(job.pk))
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        """Export archives are private; do not expose MEDIA_ROOT URLs."""
+        job = self.get_object()
+        if not job.file:
+            raise Http404
+        return FileResponse(
+            job.file.open("rb"),
+            as_attachment=True,
+            filename=job.file.name.rsplit("/", 1)[-1],
+        )
