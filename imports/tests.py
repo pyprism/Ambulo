@@ -64,7 +64,9 @@ def test_import_commit_marks_pending_and_dispatches_task(api_client, user, monke
 
 
 @pytest.mark.django_db
-def test_import_revert_tombstones_records_written_by_job(api_client, user):
+def test_import_revert_queues_tombstoning_records_written_by_job(
+    api_client, user, monkeypatch
+):
     job = _import_job(user, status=JobStatus.completed)
     point = LocationPoint.objects.create(
         user=user,
@@ -74,13 +76,18 @@ def test_import_revert_tombstones_records_written_by_job(api_client, user):
         recorded_at=timezone.now(),
     )
 
+    dispatched = []
+    monkeypatch.setattr(
+        "imports.views.safe_delay",
+        lambda task, *args, **kwargs: dispatched.append((task.name, args, kwargs)),
+    )
     response = api_client.post(f"/api/imports/{job.pk}/revert/", format="json")
 
-    assert response.status_code == 200
-    assert response.data["tombstoned"] == 1
+    assert response.status_code == 202
+    assert response.data == {"status": "queued"}
+    assert dispatched == [("imports.revert_import", (str(job.pk),), {})]
     point.refresh_from_db()
-    assert point.deleted_at is not None
-    assert point.sync_state == SyncState.deleted_pending_sync
+    assert point.deleted_at is None
 
 
 def test_parse_gpx_skips_malformed_coordinates_and_continues():
