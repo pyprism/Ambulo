@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 
 from utils.enums import HealthMetricType
@@ -29,7 +30,16 @@ def compute_daily_rollup(user_id, date_iso):
         deleted_at__isnull=True,
     )
     totals = {field: 0 for field in ROLLUP_METRIC_FIELDS.values()}
-    for sample in samples:
+    # Steps are per-device daily totals. Use the highest device total rather
+    # than summing duplicate reports of the same walk from several devices.
+    totals["steps"] = max(
+        samples.filter(metric_type=HealthMetricType.steps)
+        .values("device_id")
+        .annotate(value=Max("value"))
+        .values_list("value", flat=True),
+        default=0,
+    )
+    for sample in samples.exclude(metric_type=HealthMetricType.steps):
         field = ROLLUP_METRIC_FIELDS.get(sample.metric_type)
         if field:
             totals[field] += sample.value
