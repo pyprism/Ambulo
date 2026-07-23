@@ -86,6 +86,7 @@ class PlaceSerializer(LatLonValidationMixin, SyncableSerializer):
             "currently_inside",
             "last_entered_at",
             "last_exited_at",
+            "notify_friends",
         ]
         read_only_fields = COMMON_SYNC_READ_ONLY_FIELDS + [
             "currently_inside",
