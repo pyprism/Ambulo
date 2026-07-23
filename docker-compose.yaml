@@ -73,7 +73,7 @@ services:
     # networking
     # Keep the container in its own network; reach host PG via extra_hosts.
     ports:
-      - "127.0.0.1:${server_port}:8000"    # only expose to localhost; put nginx in front
+      - "127.0.0.1:${server_port}:8000"    # nginx must not publicly serve /media/; use an internal location
 
 
     extra_hosts:
