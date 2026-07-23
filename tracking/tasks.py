@@ -71,8 +71,10 @@ def process_geofence_events(location_point_id):
     staleness guard makes sure only the chronologically latest point
     processed so far can move `currently_inside`.
     """
+    pending_key = None
     try:
         point = LocationPoint.objects.get(pk=location_point_id)
+        pending_key = f"geofence-sweep-pending:{point.user_id}"
     except LocationPoint.DoesNotExist:
         return
 
@@ -100,8 +102,10 @@ def process_geofence_events(location_point_id):
                 transitioned = "exited"
             place.save()
 
-        if transitioned:
+        if transitioned and place.notify_friends:
             _notify_friends(point.user_id, place.name, transitioned)
+    if pending_key:
+        cache.delete(pending_key)
 
 
 def _notify_friends(user_id, place_name, event_type):
@@ -128,10 +132,9 @@ def retention_cleanup():
             .not_deleted()
             .filter(recorded_at__lt=cutoff)
         )
-        count = stale.count()
-        for point in stale:
+        for point in stale.iterator(chunk_size=500):
             point.deleted_at = now
             point.sync_state = SyncState.deleted_pending_sync
             point.save()
-        total += count
+            total += 1
     return total
