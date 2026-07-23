@@ -176,16 +176,16 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = os.environ.get("time_zone", "UTC")
+TRUSTED_PROXY_IPS = tuple(
+    ip.strip()
+    for ip in os.environ.get("trusted_proxy_ips", "127.0.0.1,::1").split(",")
+    if ip.strip()
+)
 
 USE_I18N = False
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
-STATIC_URL = "static/"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
@@ -299,13 +299,9 @@ DATE_INPUT_FORMATS = ["%d-%m-%Y"]
 DATE_FORMAT = "d-m-Y"
 
 # DRF
-DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
-
-
-if DEBUG:
-    DEFAULT_RENDERER_CLASSES = DEFAULT_RENDERER_CLASSES + (
-        "rest_framework.renderers.BrowsableAPIRenderer",
-    )
+DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",) + (
+    ("rest_framework.renderers.BrowsableAPIRenderer",) if DEBUG else ()
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
@@ -321,6 +317,7 @@ REST_FRAMEWORK = {
         "anon": "60/minute",
         "user": "150/minute",
         "provider-webhook": "120/minute",
+        "login": "10/minute",
     },
     "DEFAULT_PARSER_CLASSES": (
         "rest_framework.parsers.JSONParser",
