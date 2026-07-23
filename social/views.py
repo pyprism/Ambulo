@@ -27,7 +27,8 @@ def _resolve_target_user(data):
     else:
         user = User.objects.filter(share_code=share_code).first()
     if user is None:
-        raise ValueError("User not found.")
+        # Do not turn friend requests into a username-existence oracle.
+        raise ValueError("Unable to create friend request.")
     return user
 
 
@@ -92,6 +93,11 @@ class FriendshipViewSet(
         friendship.status = FriendshipStatus.accepted
         friendship.responded_at = timezone.now()
         friendship.save()
+        Notification.objects.create(
+            user=friendship.requester,
+            notification_type=NotificationType.friend_accept,
+            payload={"from_username": request.user.username},
+        )
         record_audit_event(request, "friend.accept", friendship_id=str(friendship.pk))
         return Response(FriendshipSerializer(friendship).data)
 
