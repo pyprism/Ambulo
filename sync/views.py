@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from django.db import connection
+from django.db import IntegrityError, connection
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from utils.enums import SyncState
 from utils.etc import resolve_device
-from utils.exceptions import CrossUserConflict
+from utils.exceptions import CrossUserConflict, format_integrity_error
 from utils.permissions import IsStaffUser
 
 from .registry import all_syncable_types, get_syncable
@@ -77,6 +77,18 @@ class SyncableModelViewSet(viewsets.ModelViewSet):
                     }
                 )
                 continue
+            except IntegrityError as e:
+                # One bad/racing record must not sink the rest of the batch
+                # the way an uncaught IntegrityError propagating out of this
+                # loop would (whole request 400s, nothing in this chunk gets
+                # marked synced even though most of it upserted fine).
+                rejected.append(
+                    {
+                        "id": str(record_id),
+                        "errors": format_integrity_error(e)["errors"],
+                    }
+                )
+                continue
             (conflicts if conflict else accepted).append(self.get_serializer(obj).data)
         response_status = status.HTTP_201_CREATED if accepted else status.HTTP_200_OK
         return Response(
@@ -126,6 +138,14 @@ class SyncViewSet(viewsets.ViewSet):
                     {
                         "id": str(record_id),
                         "errors": "Record id belongs to another user.",
+                    }
+                )
+                continue
+            except IntegrityError as e:
+                rejected.append(
+                    {
+                        "id": str(record_id),
+                        "errors": format_integrity_error(e)["errors"],
                     }
                 )
                 continue
