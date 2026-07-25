@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 
 from utils.enums import SyncSource, SyncState
 
@@ -98,8 +98,23 @@ class SyncableManager(models.Manager.from_queryset(SyncableQuerySet)):
                 existing.sync_state = target_sync_state
                 existing.save()
                 return existing, False, False
-            obj = self.model(pk=record_id, **full_defaults)
-            obj.save()
+            try:
+                with transaction.atomic(using=self.db):
+                    obj = self.model(pk=record_id, **full_defaults)
+                    obj.save()
+            except IntegrityError:
+                # Lost a create race to a concurrent upsert of the same new
+                # client-generated id (select_for_update can't lock a row
+                # that doesn't exist yet, so two inserts of the same new id
+                # can both reach here). The row exists now — retry as an
+                # update instead of surfacing a raw pk-collision error.
+                return self.upsert_for_user(
+                    user,
+                    record_id,
+                    defaults,
+                    device=device,
+                    base_server_rev=base_server_rev,
+                )
             return obj, True, False
 
 
