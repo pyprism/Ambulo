@@ -133,30 +133,6 @@ def parse_google_takeout(file_obj):
         }
 
 
-def parse_google_fit(file_obj):
-    """Google Fit Takeout daily activity CSV (steps). Takeout column names
-    vary by export vintage, so this checks a couple of likely headers."""
-    raw = file_obj.read()
-    if isinstance(raw, bytes):
-        raw = raw.decode("utf-8-sig")
-    reader = csv.DictReader(io.StringIO(raw))
-    for row in reader:
-        date_str = row.get("Date") or row.get("date")
-        steps = row.get("Step count") or row.get("steps") or row.get("Steps")
-        if not date_str or not steps:
-            continue
-        try:
-            steps_value = float(steps)
-        except ValueError:
-            continue
-        yield {
-            "kind": "health_sample",
-            "metric_type": "steps",
-            "value": steps_value,
-            "recorded_at": f"{date_str}T00:00:00Z",
-        }
-
-
 def parse_owntracks_csv(file_obj):
     """OwnTracks CSV export: time/tst, lat, lon, alt, batt columns."""
     raw = file_obj.read()
@@ -288,6 +264,5 @@ PARSERS = {
     "owntracks_csv": parse_owntracks_csv,
     "google_takeout": parse_google_takeout,
     "google_takeout_semantic": parse_google_takeout_semantic,
-    "google_fit": parse_google_fit,
     "tcx": parse_tcx,
 }
