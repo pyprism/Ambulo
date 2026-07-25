@@ -108,7 +108,6 @@ class ImportFormat(models.TextChoices):
         "google_takeout_semantic",
         "Google Takeout (Semantic Location History)",
     )
-    google_fit = "google_fit", "Google Fit (steps CSV)"
     tcx = "tcx", "TCX (Google Fit/Garmin workout export)"
 
 
