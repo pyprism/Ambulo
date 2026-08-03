@@ -10,7 +10,7 @@ freezegun==1.5.5
 coverage==7.15.2
 django-debug-toolbar==7.0.0
 pytest-django==4.12.0
-markdown==3.10.2
+markdown==3.10.3
 djangorestframework==3.17.1
 django-filter==26.1
 djangorestframework-simplejwt==5.5.1
