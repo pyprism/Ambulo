@@ -35,11 +35,13 @@ class LocationPointSerializer(LatLonValidationMixin, SyncableSerializer):
             "horizontal_accuracy",
             "vertical_accuracy",
             "speed",
+            "speed_accuracy",
             "heading",
             "recorded_at",
             "battery_level",
             "connectivity",
             "monitoring_mode",
+            "trip_id",
         ]
         read_only_fields = COMMON_SYNC_READ_ONLY_FIELDS
 
@@ -58,6 +60,11 @@ class LocationPointSerializer(LatLonValidationMixin, SyncableSerializer):
     def validate_speed(self, value):
         if value is not None and value < 0:
             raise serializers.ValidationError("speed must be non-negative.")
+        return value
+
+    def validate_speed_accuracy(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("speed_accuracy must be non-negative.")
         return value
 
     def validate_heading(self, value):
