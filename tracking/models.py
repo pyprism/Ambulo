@@ -11,6 +11,7 @@ class LocationPoint(SyncableModel):
     horizontal_accuracy = models.FloatField(null=True, blank=True)
     vertical_accuracy = models.FloatField(null=True, blank=True)
     speed = models.FloatField(null=True, blank=True)
+    speed_accuracy = models.FloatField(null=True, blank=True)
     heading = models.FloatField(null=True, blank=True)
     recorded_at = models.DateTimeField()
     battery_level = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -19,6 +20,16 @@ class LocationPoint(SyncableModel):
     )
     monitoring_mode = models.CharField(
         max_length=16, choices=MonitoringMode.choices, default=MonitoringMode.manual
+    )
+    trip_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Client-assigned Trip grouping id. No FK: client generates "
+            "Trip and LocationPoint UUIDs independently and may upload "
+            "points before their trip in the same batch; a trip can also "
+            "be deleted without invalidating already-synced points."
+        ),
     )
 
     class Meta(SyncableModel.Meta):
