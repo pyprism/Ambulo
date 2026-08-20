@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 
-from utils.enums import SyncState
+from utils.enums import SyncSource, SyncState
 
 from .models import LocationPoint, Place
 
@@ -62,49 +62,86 @@ def _haversine_meters(lat1, lon1, lat2, lon2):
 
 
 @shared_task(name="tracking.process_geofence_events")
-def process_geofence_events(location_point_id):
-    """Update each of the point's user's Place geofences with enter/exit
-    transitions.
+def process_geofence_events(user_id):
+    """Sweep every one of a user's Place geofences against every point
+    recorded since that place's `state_as_of`, resolving enter/exit
+    transitions in chronological order.
+
+    signals.py enqueues this at most once per 60s debounce window (one
+    cache key per user) regardless of how many points were saved in that
+    window — so the sweep, not the triggering point, is what has to see
+    every point. A version keyed on a single remembered point id examines
+    only that one point per window: a batched upload's mid-batch
+    enter/exit transitions are silently skipped, `last_entered_at`/
+    `last_exited_at` land on the wrong point, and short visits vanish.
 
     Points arrive out of order across concurrent Celery tasks (batch sync,
     retries) — a `select_for_update` per place plus the `state_as_of`
-    staleness guard makes sure only the chronologically latest point
-    processed so far can move `currently_inside`.
+    staleness guard makes sure only points strictly after the last
+    processed one can move `currently_inside`, and processing them in
+    `recorded_at` order keeps transitions chronological even when this
+    sweep and another run's sweep race.
     """
-    pending_key = None
+    pending_key = f"geofence-sweep-pending:{user_id}"
     try:
-        point = LocationPoint.objects.get(pk=location_point_id)
-        pending_key = f"geofence-sweep-pending:{point.user_id}"
-    except LocationPoint.DoesNotExist:
-        return
+        for place_id in (
+            Place.objects.filter(user_id=user_id)
+            .not_deleted()
+            .values_list("pk", flat=True)
+        ):
+            transitions = []
+            with transaction.atomic():
+                place = Place.objects.select_for_update().get(pk=place_id)
+                points = (
+                    LocationPoint.objects.filter(user_id=user_id)
+                    .not_deleted()
+                    .exclude(source=SyncSource.import_)
+                    .order_by("recorded_at")
+                )
+                if place.state_as_of is not None:
+                    points = points.filter(recorded_at__gt=place.state_as_of)
+                else:
+                    # A place with no processed state yet (just created) has
+                    # no natural lower bound — without one this replays every
+                    # point the user has ever synced (100k+ in the load-tested
+                    # case) inside a select_for_update on the place, and fires
+                    # one friend notification per historical transition.
+                    # Seed from the single most recent point instead: that
+                    # establishes an initial currently_inside/state_as_of
+                    # without walking history.
+                    latest_id = (
+                        points.order_by("-recorded_at")
+                        .values_list("pk", flat=True)
+                        .first()
+                    )
+                    points = points.filter(pk=latest_id) if latest_id else points.none()
 
-    for place_id in (
-        Place.objects.for_user(point.user).not_deleted().values_list("pk", flat=True)
-    ):
-        with transaction.atomic():
-            place = Place.objects.select_for_update().get(pk=place_id)
-            if place.state_as_of is not None and point.recorded_at <= place.state_as_of:
-                continue
+                changed = False
+                for point in points.iterator(chunk_size=500):
+                    distance = _haversine_meters(
+                        point.latitude,
+                        point.longitude,
+                        place.latitude,
+                        place.longitude,
+                    )
+                    is_inside = distance <= place.radius_meters
+                    place.state_as_of = point.recorded_at
+                    changed = True
+                    if is_inside and not place.currently_inside:
+                        place.currently_inside = True
+                        place.last_entered_at = point.recorded_at
+                        transitions.append("entered")
+                    elif not is_inside and place.currently_inside:
+                        place.currently_inside = False
+                        place.last_exited_at = point.recorded_at
+                        transitions.append("exited")
+                if changed:
+                    place.save()
 
-            distance = _haversine_meters(
-                point.latitude, point.longitude, place.latitude, place.longitude
-            )
-            is_inside = distance <= place.radius_meters
-            place.state_as_of = point.recorded_at
-            transitioned = None
-            if is_inside and not place.currently_inside:
-                place.currently_inside = True
-                place.last_entered_at = point.recorded_at
-                transitioned = "entered"
-            elif not is_inside and place.currently_inside:
-                place.currently_inside = False
-                place.last_exited_at = point.recorded_at
-                transitioned = "exited"
-            place.save()
-
-        if transitioned and place.notify_friends:
-            _notify_friends(point.user_id, place.name, transitioned)
-    if pending_key:
+            if place.notify_friends:
+                for transitioned in transitions:
+                    _notify_friends(user_id, place.name, transitioned)
+    finally:
         cache.delete(pending_key)
 
 
