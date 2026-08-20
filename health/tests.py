@@ -72,3 +72,60 @@ def test_stats_trend_averages_point_in_time_health_samples(api_client, user):
     assert response.status_code == 200
     assert response.data["metric"] == HealthMetricType.weight
     assert response.data["points"] == [{"date": date.today(), "value": 71.0}]
+
+
+@pytest.mark.django_db
+def test_daily_rollup_maxes_multi_device_sensor_samples_but_sums_manual_ones(
+    user,
+):
+    from accounts.models import Device
+    from health.tasks import compute_daily_rollup
+    from utils.enums import SyncSource
+
+    device_a = Device.objects.create(user=user, name="A", platform="android")
+    device_b = Device.objects.create(user=user, name="B", platform="ios")
+    day = timezone.now()
+
+    # Two devices reporting the same underlying activity — collapsed to the
+    # higher device total, not summed to ~2x.
+    HealthSample.objects.create(
+        id=uuid.uuid4(),
+        user=user,
+        device=device_a,
+        metric_type=HealthMetricType.calories,
+        value=500,
+        recorded_at=day,
+        source=SyncSource.motion,
+    )
+    HealthSample.objects.create(
+        id=uuid.uuid4(),
+        user=user,
+        device=device_b,
+        metric_type=HealthMetricType.calories,
+        value=600,
+        recorded_at=day,
+        source=SyncSource.motion,
+    )
+    # Two separately-logged manual entries — no per-device dedup guarantee,
+    # so these must sum instead of the larger silently replacing the other.
+    HealthSample.objects.create(
+        id=uuid.uuid4(),
+        user=user,
+        metric_type=HealthMetricType.calories,
+        value=300,
+        recorded_at=day,
+        source=SyncSource.manual,
+    )
+    HealthSample.objects.create(
+        id=uuid.uuid4(),
+        user=user,
+        metric_type=HealthMetricType.calories,
+        value=200,
+        recorded_at=day,
+        source=SyncSource.manual,
+    )
+
+    compute_daily_rollup(user.pk, day.date().isoformat())
+
+    rollup = DailyRollup.objects.get(user=user, date=day.date())
+    assert rollup.calories == 600 + 300 + 200
