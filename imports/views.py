@@ -65,6 +65,20 @@ class ImportJobViewSet(
     def revert(self, request, pk=None):
         """Queue tombstoning so large imports never hold the HTTP request."""
         job = self.get_object()
+        # Without this, revert can be queued while process_import is still
+        # running (or before it's run at all) — rows the sweep misses because
+        # they're created after it runs survive with no indication to the
+        # user that a second revert is needed.
+        if job.status not in (JobStatus.completed, JobStatus.partial):
+            return Response(
+                {
+                    "message": (
+                        f"Job must be 'completed' or 'partial' to revert "
+                        f"(current: '{job.status}')."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         safe_delay(revert_import, str(job.pk))
         record_audit_event(request, "import.revert", job_id=str(job.pk), queued=True)
         return Response({"status": "queued"}, status=status.HTTP_202_ACCEPTED)
