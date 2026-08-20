@@ -136,6 +136,7 @@ def _import_location_point(user, record, commit, job):
 
     duplicate = (
         LocationPoint.objects.for_user(user)
+        .not_deleted()
         .filter(
             recorded_at__gte=recorded_at - TIMESTAMP_DEDUPE_TOLERANCE,
             recorded_at__lte=recorded_at + TIMESTAMP_DEDUPE_TOLERANCE,
@@ -157,6 +158,10 @@ def _import_location_point(user, record, commit, job):
             longitude=longitude,
             altitude=record.get("altitude"),
             battery_level=record.get("battery_level"),
+            horizontal_accuracy=record.get("horizontal_accuracy"),
+            vertical_accuracy=record.get("vertical_accuracy"),
+            speed=record.get("speed"),
+            heading=record.get("heading"),
             recorded_at=recorded_at,
             source="import",
             import_job=job,
@@ -171,6 +176,7 @@ def _import_health_sample(user, record, commit, job):
 
     duplicate = (
         HealthSample.objects.for_user(user)
+        .not_deleted()
         .filter(
             metric_type=record["metric_type"],
             recorded_at__gte=recorded_at - TIMESTAMP_DEDUPE_TOLERANCE,
