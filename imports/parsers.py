@@ -99,6 +99,14 @@ def parse_owntracks(file_obj):
         recorded_at = (
             datetime.fromtimestamp(tst, tz=dt_timezone.utc).isoformat() if tst else None
         )
+        vel_kmh = row.get("vel")
+        # A malformed 'vel' (wrong type from a hand-edited/non-conforming
+        # file) must not raise here — this runs eagerly per row, before the
+        # yielded dict ever reaches _run_import's per-record try/except, so
+        # an uncaught error kills the whole import job instead of just this
+        # one row.
+        if not isinstance(vel_kmh, (int, float)):
+            vel_kmh = None
         yield {
             "kind": "location_point",
             "latitude": row.get("lat"),
@@ -106,6 +114,11 @@ def parse_owntracks(file_obj):
             "recorded_at": recorded_at,
             "altitude": row.get("alt"),
             "battery_level": row.get("batt"),
+            "horizontal_accuracy": row.get("acc"),
+            "vertical_accuracy": row.get("vac"),
+            # OwnTracks 'vel' is km/h; Ambulo stores speed in m/s.
+            "speed": vel_kmh * 1000 / 3600 if vel_kmh is not None else None,
+            "heading": row.get("cog"),
         }
 
 
@@ -153,6 +166,10 @@ def parse_owntracks_csv(file_obj):
             except (TypeError, ValueError):
                 recorded_at = tst  # already an ISO string
         try:
+            # A malformed 'vel' must skip only this row (caught below), not
+            # raise before the try the way computing it outside this block
+            # would.
+            vel_kmh = float(row["vel"]) if row.get("vel") else None
             yield {
                 "kind": "location_point",
                 "latitude": float(lat),
@@ -160,6 +177,11 @@ def parse_owntracks_csv(file_obj):
                 "recorded_at": recorded_at,
                 "altitude": float(row["alt"]) if row.get("alt") else None,
                 "battery_level": float(row["batt"]) if row.get("batt") else None,
+                "horizontal_accuracy": float(row["acc"]) if row.get("acc") else None,
+                "vertical_accuracy": float(row["vac"]) if row.get("vac") else None,
+                # OwnTracks 'vel' is km/h; Ambulo stores speed in m/s.
+                "speed": vel_kmh * 1000 / 3600 if vel_kmh is not None else None,
+                "heading": float(row["cog"]) if row.get("cog") else None,
             }
         except ValueError:
             continue
