@@ -53,7 +53,13 @@ class RevisionCounter(models.Model):
 
 class SyncableManager(models.Manager.from_queryset(SyncableQuerySet)):
     def upsert_for_user(
-        self, user, record_id, defaults, device=None, base_server_rev=None
+        self,
+        user,
+        record_id,
+        defaults,
+        device=None,
+        base_server_rev=None,
+        _retried=False,
     ):
         """Idempotent create-or-update keyed on the client-supplied UUID pk.
 
@@ -64,12 +70,19 @@ class SyncableManager(models.Manager.from_queryset(SyncableQuerySet)):
 
         If the caller passes ``base_server_rev`` (the server_rev it last
         synced) and it no longer matches the row's current server_rev,
-        someone else changed the record since — flag sync_state=conflict
-        and leave server data untouched instead of blindly overwriting
+        someone else changed the record since — report the conflict to the
+        caller without touching the stored row. Conflict is a property of
+        this uploader's request, not of the record: writing sync_state onto
+        the server copy would broadcast a fake "conflict" to every other
+        device on the next download and re-bump server_rev forever on retry.
+
+        ``device`` is only ever assigned on create. A re-upload missing
+        ``device`` (stripped header, other client, regression) must not null
+        out an existing record's device attribution or count as a change.
 
         Returns (obj, created, conflict).
         """
-        full_defaults = {**defaults, "user": user, "device": device}
+        full_defaults = {**defaults, "user": user}
         with transaction.atomic(using=self.db):
             existing = (
                 self.model.objects.select_for_update().filter(pk=record_id).first()
@@ -81,39 +94,53 @@ class SyncableManager(models.Manager.from_queryset(SyncableQuerySet)):
                     base_server_rev is not None
                     and existing.server_rev != base_server_rev
                 ):
-                    existing.sync_state = SyncState.conflict
-                    existing.save()
                     return existing, False, True
-                target_sync_state = full_defaults.get("sync_state", SyncState.synced)
+                # device is deliberately excluded from update_defaults, not
+                # just from a None one: a byte-identical re-upload from a
+                # *second* legitimate device would otherwise flip device
+                # attribution on every touch, fail the unchanged-check below
+                # (device differs from what's stored), bump server_rev, and
+                # re-fan the row to every other device for no real change —
+                # and the client's own "my device's row" lookups (e.g. the
+                # pedometer's today-row query) rely on device staying
+                # whichever device first created the record.
+                update_defaults = dict(full_defaults)
+                target_sync_state = update_defaults.get("sync_state", SyncState.synced)
                 # A retried/unmodified re-upload must not bump server_rev —
                 # that would push the record back into every other device's
                 # changed-since download for no reason.
                 if existing.sync_state == target_sync_state and all(
                     _field_unchanged(existing, field, value)
-                    for field, value in full_defaults.items()
+                    for field, value in update_defaults.items()
                 ):
                     return existing, False, False
-                for field, value in full_defaults.items():
+                for field, value in update_defaults.items():
                     setattr(existing, field, value)
                 existing.sync_state = target_sync_state
                 existing.save()
                 return existing, False, False
             try:
                 with transaction.atomic(using=self.db):
-                    obj = self.model(pk=record_id, **full_defaults)
+                    obj = self.model(pk=record_id, device=device, **full_defaults)
                     obj.save()
             except IntegrityError:
                 # Lost a create race to a concurrent upsert of the same new
                 # client-generated id (select_for_update can't lock a row
                 # that doesn't exist yet, so two inserts of the same new id
-                # can both reach here). The row exists now — retry as an
-                # update instead of surfacing a raw pk-collision error.
+                # can both reach here). The row exists now — retry once as
+                # an update instead of surfacing a raw pk-collision error.
+                # A persistent IntegrityError (FK/check violation, not the
+                # pk race) means the row still won't exist on a second try —
+                # re-raise instead of recursing forever.
+                if _retried:
+                    raise
                 return self.upsert_for_user(
                     user,
                     record_id,
                     defaults,
                     device=device,
                     base_server_rev=base_server_rev,
+                    _retried=True,
                 )
             return obj, True, False
 
