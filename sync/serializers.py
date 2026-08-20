@@ -10,8 +10,9 @@ COMMON_SYNC_FIELDS = [
     "updated_at",
     "deleted_at",
     "base_server_rev",
+    "device",
 ]
-COMMON_SYNC_READ_ONLY_FIELDS = ["server_rev", "created_at", "updated_at"]
+COMMON_SYNC_READ_ONLY_FIELDS = ["server_rev", "created_at", "updated_at", "device"]
 
 
 class SyncableSerializer(serializers.ModelSerializer):
