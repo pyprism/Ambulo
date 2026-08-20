@@ -65,6 +65,34 @@ def test_idempotent_repost_does_not_duplicate(api_client):
 
 
 @pytest.mark.django_db
+def test_unchanged_repost_from_a_different_device_does_not_reattribute_or_bump(
+    api_client, user
+):
+    from accounts.models import Device
+
+    device_a = Device.objects.create(user=user, name="Phone A", platform="android")
+    device_b = Device.objects.create(user=user, name="Phone B", platform="ios")
+
+    point_id = uuid.uuid4()
+    payload = [_point_payload(point_id)]
+
+    api_client.post(
+        "/api/points/", payload, format="json", HTTP_X_DEVICE_ID=str(device_a.pk)
+    )
+    api_client.post(
+        "/api/points/", payload, format="json", HTTP_X_DEVICE_ID=str(device_b.pk)
+    )
+
+    point = LocationPoint.objects.get(pk=point_id)
+    # device is assigned once, on create — a byte-identical re-upload from a
+    # second legitimate device must not reattribute it (breaks the client's
+    # own "my device's row" lookups) or count as a change and bump
+    # server_rev (re-fans the row to every other device for nothing).
+    assert point.device_id == device_a.pk
+    assert point.server_rev == 1
+
+
+@pytest.mark.django_db
 def test_repost_with_changed_field_does_bump_server_rev(api_client):
     point_id = uuid.uuid4()
     api_client.post("/api/points/", [_point_payload(point_id)], format="json")
@@ -110,7 +138,10 @@ def test_stale_base_server_rev_flags_conflict_without_overwriting(api_client):
     assert not response.data["accepted"]
     point = LocationPoint.objects.get(pk=point_id)
     assert point.latitude == 23.8
-    assert point.sync_state == "conflict"
+    # Conflict is a property of this uploader's request, not the stored
+    # record — the row itself must stay untouched (no state write, no rev
+    # bump) so it doesn't fan a fake "conflict" out to every other device.
+    assert point.sync_state == "synced"
 
 
 @pytest.mark.django_db
