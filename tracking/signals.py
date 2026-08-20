@@ -17,7 +17,7 @@ def trigger_geofence_check(sender, instance, **kwargs):
     if not instance.deleted_at and instance.source != SyncSource.import_:
         key = f"geofence-sweep-pending:{instance.user_id}"
         if cache.add(key, "1", timeout=60):
-            safe_delay(process_geofence_events, str(instance.pk))
+            safe_delay(process_geofence_events, str(instance.user_id))
 
 
 @receiver(post_save, sender=Place)
