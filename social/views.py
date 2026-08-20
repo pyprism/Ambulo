@@ -121,6 +121,18 @@ class FriendshipViewSet(
     @action(detail=True, methods=["post"])
     def block(self, request, pk=None):
         friendship = self.get_object()
+        # Without this, the blocked party can re-call block (they're still a
+        # party to the row) to overwrite blocked_by to themselves, then pass
+        # revoke's "only the blocker can lift it" check and delete the row —
+        # defeating the durable-block guarantee revoke enforces.
+        if (
+            friendship.status == FriendshipStatus.blocked
+            and friendship.blocked_by_id != request.user.pk
+        ):
+            return Response(
+                {"message": "This relationship is already blocked."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         friendship.status = FriendshipStatus.blocked
         friendship.blocked_by = request.user
         friendship.responded_at = timezone.now()
@@ -131,6 +143,13 @@ class FriendshipViewSet(
     @action(detail=True, methods=["patch"])
     def share(self, request, pk=None):
         friendship = self.get_object()
+        if friendship.status != FriendshipStatus.accepted:
+            return Response(
+                {
+                    "message": f"Cannot change share settings on a '{friendship.status}' friendship."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         share_value = serializer.validated_data["share_location"]
