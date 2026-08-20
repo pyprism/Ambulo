@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import User
 from imports.models import ImportJob
-from imports.parsers import parse_gpx, parse_owntracks_csv, parse_tcx
+from imports.parsers import parse_gpx, parse_owntracks, parse_owntracks_csv, parse_tcx
 from tracking.models import LocationPoint
 from utils.enums import ImportFormat, JobStatus, SyncState
 
@@ -134,6 +134,63 @@ def test_parse_owntracks_csv_skips_malformed_numeric_rows_and_continues():
             "recorded_at": "2024-07-15T12:05:00+00:00",
             "altitude": 6.5,
             "battery_level": 87.0,
+            "horizontal_accuracy": None,
+            "vertical_accuracy": None,
+            "speed": None,
+            "heading": None,
+        }
+    ]
+
+
+def test_parse_owntracks_csv_skips_malformed_vel_row_and_continues():
+    # 'vel' coercion must not raise outside the row's own try/except and
+    # kill the whole parse — only this row should be skipped.
+    csv_data = """time,lat,lon,vel
+1721044800,23.7,90.3,not-a-number
+1721045100,23.8,90.4,10
+"""
+
+    records = list(parse_owntracks_csv(io.StringIO(csv_data)))
+
+    assert records == [
+        {
+            "kind": "location_point",
+            "latitude": 23.8,
+            "longitude": 90.4,
+            "recorded_at": "2024-07-15T12:05:00+00:00",
+            "altitude": None,
+            "battery_level": None,
+            "horizontal_accuracy": None,
+            "vertical_accuracy": None,
+            "speed": 10 * 1000 / 3600,
+            "heading": None,
+        }
+    ]
+
+
+def test_parse_owntracks_treats_non_numeric_vel_as_missing_speed():
+    # A malformed 'vel' in the JSON/.rec payload is computed eagerly per
+    # row, before the per-record try/except in _run_import ever sees it —
+    # it must not raise and abort the whole import job.
+    payload = (
+        '[{"_type": "location", "lat": 23.8, "lon": 90.4, "tst": 1721044800, '
+        '"vel": "fast"}]'
+    )
+
+    records = list(parse_owntracks(io.StringIO(payload)))
+
+    assert records == [
+        {
+            "kind": "location_point",
+            "latitude": 23.8,
+            "longitude": 90.4,
+            "recorded_at": "2024-07-15T12:00:00+00:00",
+            "altitude": None,
+            "battery_level": None,
+            "horizontal_accuracy": None,
+            "vertical_accuracy": None,
+            "speed": None,
+            "heading": None,
         }
     ]
 
