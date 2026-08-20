@@ -306,7 +306,8 @@ class HealthzViewSet(viewsets.ViewSet):
         recent security events. Public /healthz stays minimal/unauthenticated on purpose;
         this is the richer surface the admin console should call."""
 
-        base = self.list(request).data
+        base_response = self.list(request)
+        base = base_response.data
 
         base["dataset"] = {
             "users": User.objects.count(),
@@ -322,4 +323,4 @@ class HealthzViewSet(viewsets.ViewSet):
             }
             for entry in AuditLog.objects.order_by("-created_at")[:20]
         ]
-        return Response(base)
+        return Response(base, status=base_response.status_code)
